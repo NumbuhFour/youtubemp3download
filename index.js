@@ -1,9 +1,11 @@
 
+var EventEmitter = require('events').EventEmitter;
 var exec = require('child_process').exec;
 var minimist=require('minimist');
 var http = require('http');
 var youtube = new (require('youtube-node'))();
 var fs = require('fs');
+var sanitize = require('sanitize-filename');
 
 var params = minimist(process.argv.slice(2));
 var keys = require(params['keys'] || './keys.json');
@@ -56,8 +58,9 @@ const handleRequest = (req, res) => {
         else {
 
           var url = "https://www.youtube.com/watch?v=" + list.items[0].id.videoId;
-          var videoName = list.items[0].snippet.title.split(' ').join('_');
+          var videoName = list.items[0].snippet.title.split(' ').join('_'); // Replace spaces
           videoName += '.mp3';
+          videoName = sanitize(videoName);
           var videoPath = './dl/' + videoName;
 
           var checkAndContinue = function () {
