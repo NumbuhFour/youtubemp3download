@@ -1,0 +1,17 @@
+<html>
+  <head>
+  </head>
+  <body>
+    <input type="text" id="input"/>
+    <button id="submit">Submit</button>
+
+    <script>
+      document.getElementById('submit').addEventListener('click', function() {
+        var input = document.getElementById('input');
+
+        document.location = '/?search=' + input.value;
+      });
+
+    </script>
+  </body>
+</html>
