@@ -34,6 +34,8 @@ var params = (req) => {
   return result;
 };
 
+var downloading = {};
+
 const handleRequest = (req, res) => {
   
   var p = params(req);
@@ -57,29 +59,71 @@ const handleRequest = (req, res) => {
           var videoName = list.items[0].snippet.title.split(' ').join('_');
           videoName += '.mp3';
           var videoPath = './dl/' + videoName;
-          var cmd = 'youtube-dl --extract-audio --audio-format mp3 "' + url + '" -o "' + videoPath + '"';
 
-          console.log('Executing: ' + cmd);
-          exec(cmd, (err, stdout, stderr) => {
+          var checkAndContinue = function () {
 
-            if (err) {
-              console.log('cmd err:' + err);
-              res.end('Cmd err:' + err);
-              return;
-            }
+            fs.access(videoPath, fs.R_OK, (err) => {
+              // Doesn't exist
+              if (err) {
+                 var cmd = 'youtube-dl --extract-audio --audio-format mp3 "' + url + '" -o "' + videoPath + '"';
 
-            // Begin streaming file
-            var stat = fs.statSync(videoPath);
-            var total = stat.size;
+                console.log('Executing: ' + cmd);
+                
+                downloading[videoPath] = new EventEmitter();
 
-            res.writeHead(200, {
-              'Content-Length': total,
-              'Content-Type': 'audio/mp3',
-              'Content-Disposition': 'inline; filename="' + videoName + '.mp4"'
+                exec(cmd, (err, stdout, stderr) => {
+
+                  if (err) {
+                    console.log('cmd err:' + err);
+                    res.end('Cmd err:' + err);
+                    downloading[videoPath].emit('error');
+                    delete downloading[videoPath];
+                    return;
+                  }
+
+                  downloading[videoPath].emit('done');
+                  delete downloading[videoPath];
+
+                  // Begin streaming file
+                  var stat = fs.statSync(videoPath);
+                  var total = stat.size;
+
+                  res.writeHead(200, {
+                    'Content-Length': total,
+                    'Content-Type': 'audio/mp3',
+                    'Content-Disposition': 'inline; filename="' + videoName + '.mp4"'
+                  });
+                  fs.createReadStream(videoPath).pipe(res);
+                });
+              }
+              else {
+
+                console.log(videoPath + ' already exists.');
+
+                // Begin streaming file
+                var stat = fs.statSync(videoPath);
+                var total = stat.size;
+
+                res.writeHead(200, {
+                  'Content-Length': total,
+                  'Content-Type': 'audio/mp3',
+                  'Content-Disposition': 'inline; filename="' + videoName + '.mp4"'
+                });
+                fs.createReadStream(videoPath).pipe(res);
+              }
             });
-            fs.createReadStream(videoPath).pipe(res);
+          };
 
-          });
+
+          // Wait if already downloading
+          if (downloading[videoPath]) {
+            downloading[videoPath].addListener('done', checkAndContinue);
+            downloading[videoPath].addListener('error', res.end('error'));
+          }
+          else {
+            checkAndContinue();
+          }
+
         }
       }
     });
