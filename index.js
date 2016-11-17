@@ -94,7 +94,7 @@ const handleRequest = (req, res) => {
                   res.writeHead(200, {
                     'Content-Length': total,
                     'Content-Type': 'audio/mp3',
-                    'Content-Disposition': 'inline; filename="' + videoName + '.mp4"'
+                    'Content-Disposition': 'inline; filename="' + videoName + '"'
                   });
                   fs.createReadStream(videoPath).pipe(res);
                 });
@@ -110,7 +110,7 @@ const handleRequest = (req, res) => {
                 res.writeHead(200, {
                   'Content-Length': total,
                   'Content-Type': 'audio/mp3',
-                  'Content-Disposition': 'inline; filename="' + videoName + '.mp4"'
+                  'Content-Disposition': 'inline; filename="' + videoName + '"'
                 });
                 fs.createReadStream(videoPath).pipe(res);
               }
@@ -121,7 +121,7 @@ const handleRequest = (req, res) => {
           // Wait if already downloading
           if (downloading[videoPath]) {
             downloading[videoPath].addListener('done', checkAndContinue);
-            downloading[videoPath].addListener('error', res.end('error'));
+            downloading[videoPath].addListener('error', () => res.end('error'));
           }
           else {
             checkAndContinue();
